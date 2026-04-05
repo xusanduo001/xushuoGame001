@@ -83,7 +83,10 @@ export default function App() {
     stunTimer: 0,   // 被尖刺扎到后的暂停计时器
     jetpackTimer: 0, // 喷气背包计时器
     lives: 3,
-    obstacleCount: 0
+    obstacleCount: 0,
+    lastTime: 0,
+    spawnTimer: 0,
+    coinTimer: 0
   });
 
   // 开始游戏
@@ -103,7 +106,10 @@ export default function App() {
       stunTimer: 0,
       jetpackTimer: 0,
       lives: 3,
-      obstacleCount: 0
+      obstacleCount: 0,
+      lastTime: 0,
+      spawnTimer: 0,
+      coinTimer: 0
     };
     setScore(0);
     setLives(3);
@@ -145,17 +151,26 @@ export default function App() {
 
     let animationId: number;
 
-    const update = () => {
+    const update = (time: number) => {
       const g = gameRef.current;
-      g.frame++;
+      
+      // 计算时间增量 (以 60FPS 为基准)
+      if (!g.lastTime) g.lastTime = time;
+      const deltaTime = (time - g.lastTime) / (1000 / 60);
+      g.lastTime = time;
+
+      // 限制 deltaTime 防止切屏回来后产生巨大的跳跃
+      const dt = Math.min(deltaTime, 3);
+
+      g.frame += dt;
 
       // 1. 物理更新
       if (g.jetpackTimer > 0) {
         g.playerY = 200; // 悬空高度
         g.playerVY = 0;
       } else {
-        g.playerVY += GRAVITY;
-        g.playerY += g.playerVY;
+        g.playerVY += GRAVITY * dt;
+        g.playerY += g.playerVY * dt;
       }
 
       if (g.playerY > GROUND_Y - PLAYER_SIZE) {
@@ -167,22 +182,21 @@ export default function App() {
       // 2. 警车逻辑
       if (g.stunTimer > 0) {
         // 只有在玩家被暂停（碰到尖刺）时，警车才靠近
-        g.policeX += 0.15; 
+        g.policeX += 0.15 * dt; 
       }
       
       // 喷气背包期间警车退后
       if (g.jetpackTimer > 0) {
-        if (g.policeX > -10) g.policeX -= 0.5;
-        g.jetpackTimer--;
+        if (g.policeX > -10) g.policeX -= 0.5 * dt;
+        g.jetpackTimer -= dt;
       }
       
-      // 警车追上玩家 (玩家 X 坐标是 50，车尾在 50)
-      // 修复 Bug: 只有在玩家没有处于眩晕状态时，警车才能抓到玩家
-      if (g.stunTimer === 0 && g.policeX >= 50 - PLAYER_SIZE) {
+      // 警车追上玩家
+      if (g.stunTimer <= 0 && g.policeX >= 50 - PLAYER_SIZE) {
         if (g.lives > 1) {
           g.lives--;
           setLives(g.lives);
-          g.policeX = -20; // 损失一条命，警车退回更远一点
+          g.policeX = -20;
         } else {
           setGameState('GAMEOVER');
           if (g.score > highScore) setHighScore(g.score);
@@ -192,21 +206,21 @@ export default function App() {
 
       // 3. 暂停逻辑 (碰到尖刺)
       if (g.stunTimer > 0) {
-        g.stunTimer--;
+        g.stunTimer -= dt;
       }
 
-      // 4. 生成障碍物 (尖刺)
-      if (g.frame % 100 === 0) {
+      // 4. 生成障碍物 (使用计时器替代帧数取模，更稳定)
+      g.spawnTimer += dt;
+      if (g.spawnTimer >= 100) {
+        g.spawnTimer = 0;
         g.obstacleCount++;
         if (g.obstacleCount % 15 === 0) {
-          // 每15个障碍生成一个喷气背包
           g.jetpacks.push({
             x: CANVAS_WIDTH,
             y: 150 + Math.random() * 100,
             collected: false
           });
         } else if (g.obstacleCount % 10 === 0) {
-          // 每10个障碍生成一个加速带
           g.boostPads.push({
             x: CANVAS_WIDTH,
             width: BOOST_PAD_WIDTH,
@@ -222,7 +236,9 @@ export default function App() {
       }
 
       // 5. 生成金币
-      if (g.frame % 60 === 0) {
+      g.coinTimer += dt;
+      if (g.coinTimer >= 60) {
+        g.coinTimer = 0;
         const isHigh = Math.random() > 0.6;
         const coinY = isHigh 
           ? 100 + Math.random() * 100
@@ -236,11 +252,12 @@ export default function App() {
       }
 
       // 6. 更新位置 (如果被暂停，马路不滚动)
-      if (g.stunTimer === 0) {
-        g.obstacles.forEach(obs => obs.x -= OBSTACLE_SPEED);
-        g.coins.forEach(coin => coin.x -= OBSTACLE_SPEED);
-        g.boostPads.forEach(pad => pad.x -= OBSTACLE_SPEED);
-        g.jetpacks.forEach(jp => jp.x -= OBSTACLE_SPEED);
+      if (g.stunTimer <= 0) {
+        const moveSpeed = OBSTACLE_SPEED * dt;
+        g.obstacles.forEach(obs => obs.x -= moveSpeed);
+        g.coins.forEach(coin => coin.x -= moveSpeed);
+        g.boostPads.forEach(pad => pad.x -= moveSpeed);
+        g.jetpacks.forEach(jp => jp.x -= moveSpeed);
       }
 
       // 7. 移除屏幕外的元素
@@ -323,7 +340,6 @@ export default function App() {
 
       // 8. 绘制
       draw(ctx);
-
       animationId = requestAnimationFrame(update);
     };
 
@@ -585,7 +601,7 @@ export default function App() {
       });
     };
 
-    update();
+    animationId = requestAnimationFrame(update);
     return () => cancelAnimationFrame(animationId);
   }, [gameState, highScore]);
 
