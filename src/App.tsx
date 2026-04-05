@@ -233,7 +233,7 @@ export default function App() {
       // 限制 deltaTime 防止切屏回来后产生巨大的跳跃
       const dt = Math.min(deltaTime, 3);
 
-      g.frame += dt;
+      g.frame += g.stunTimer > 0 ? 0 : dt;
 
       // 1. 物理更新
       if (g.jetpackTimer > 0) {
@@ -355,7 +355,7 @@ export default function App() {
             if (g.lives > 1) {
               g.lives--;
               setLives(g.lives);
-              g.stunTimer = 120; // 暂停 2 秒
+              g.stunTimer = 60; // 暂停 1 秒
               g.policeX = -20;   // 撞到尖刺时，警车也退后一点，防止瞬间双重扣血
             } else {
               setGameState('GAMEOVER');
@@ -724,14 +724,32 @@ export default function App() {
               <span className="font-bold text-xl text-slate-700">{highScore}</span>
             </div>
           </div>
-          <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-full flex items-center gap-2 shadow-sm self-start">
-            <span className="font-bold text-sm text-slate-500 uppercase tracking-wider">Lives</span>
-            <div className="flex gap-1">
-              {Array.from({ length: Math.min(lives, 5) }).map((_, i) => (
-                <Heart key={i} className="w-4 h-4 text-red-500 fill-red-500" />
-              ))}
-              {lives > 5 && <span className="text-slate-700 font-bold text-xs">+{lives - 5}</span>}
+          <div className="flex justify-between items-center w-full">
+            <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-full flex items-center gap-2 shadow-sm">
+              <span className="font-bold text-sm text-slate-500 uppercase tracking-wider">Lives</span>
+              <div className="flex gap-1">
+                {Array.from({ length: Math.min(lives, 5) }).map((_, i) => (
+                  <Heart key={i} className="w-4 h-4 text-red-500 fill-red-500" />
+                ))}
+                {lives > 5 && <span className="text-slate-700 font-bold text-xs">+{lives - 5}</span>}
+              </div>
             </div>
+            {gameState === 'PLAYING' && (
+              <button
+                className="pointer-events-auto bg-red-500/80 backdrop-blur hover:bg-red-600 active:scale-95 text-white text-xs font-bold px-3 py-2 rounded-full shadow-sm transition-all"
+                onClick={() => {
+                  setGameState('GAMEOVER');
+                  const g = gameRef.current;
+                  if (g.score > highScore) {
+                    setHighScore(g.score);
+                    localStorage.setItem('game_highScore', g.score.toString());
+                  }
+                  submitScore(g.score);
+                }}
+              >
+                放弃本局
+              </button>
+            )}
           </div>
         </div>
 
@@ -867,10 +885,9 @@ export default function App() {
             </button>
           </div>
         )}
-      </div>
 
-      {/* 全屏排行榜弹窗 */}
-      {showFullLeaderboard && (
+        {/* 全屏排行榜弹窗 */}
+        {showFullLeaderboard && (
         <div className="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex flex-col pt-12 p-6 text-white animate-in fade-in zoom-in duration-200">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
@@ -948,7 +965,8 @@ export default function App() {
             </button>
           </div>
         </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
