@@ -128,6 +128,10 @@ export default function App() {
     };
   }, []);
 
+  // 喷气背包模式下飞机可控Y范围
+  const PLANE_MIN_Y = 30;
+  const PLANE_MAX_Y = GROUND_Y - PLAYER_SIZE - 70; // 留出安全距离，避免碰尖刺
+
   // 游戏内部状态
   const gameRef = useRef({
     playerY: GROUND_Y - PLAYER_SIZE,
@@ -143,6 +147,7 @@ export default function App() {
     policeX: -10, // 警车初始位置，使其可见
     stunTimer: 0,   // 被尖刺扎到后的暂停计时器
     jetpackTimer: 0, // 喷气背包计时器
+    jetpackY: 200,   // 喷气背包模式下飞机的Y位置（可通过滑动控制）
     lives: 3,
     obstacleCount: 0,
     lastTime: 0,
@@ -151,6 +156,9 @@ export default function App() {
     fpsFrames: 0,
     fpsLastTime: 0
   });
+
+  // 触摸滑动控制飞机（喷气背包模式）
+  const touchStartRef = useRef<{ y: number; planeY: number } | null>(null);
 
   // 开始游戏
   const startGame = () => {
@@ -168,6 +176,7 @@ export default function App() {
       policeX: -10,
       stunTimer: 0,
       jetpackTimer: 0,
+      jetpackY: 200,
       lives: 3,
       obstacleCount: 0,
       lastTime: 0,
@@ -201,6 +210,44 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameState]);
+
+  // 触摸事件：喷气背包模式下滑动控制飞机上下，普通模式下点击跳跃
+  useEffect(() => {
+    if (gameState !== 'PLAYING') return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const g = gameRef.current;
+      if (g.jetpackTimer > 0) {
+        e.preventDefault();
+        touchStartRef.current = { y: e.touches[0].clientY, planeY: g.jetpackY };
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const g = gameRef.current;
+      if (g.jetpackTimer > 0 && touchStartRef.current) {
+        e.preventDefault();
+        const scaleY = CANVAS_HEIGHT / canvas.clientHeight;
+        const deltaY = (e.touches[0].clientY - touchStartRef.current.y) * scaleY;
+        g.jetpackY = Math.max(PLANE_MIN_Y, Math.min(PLANE_MAX_Y, touchStartRef.current.planeY + deltaY));
+      }
+    };
+
+    const handleTouchEnd = () => {
+      touchStartRef.current = null;
+    };
+
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd);
+    return () => {
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
+      canvas.removeEventListener('touchend', handleTouchEnd);
+    };
   }, [gameState]);
 
   // 游戏主循环
@@ -237,7 +284,7 @@ export default function App() {
 
       // 1. 物理更新
       if (g.jetpackTimer > 0) {
-        g.playerY = 200; // 悬空高度
+        g.playerY = g.jetpackY; // 由触摸滑动控制
         g.playerVY = 0;
       } else {
         g.playerVY += GRAVITY * dt;
@@ -414,6 +461,7 @@ export default function App() {
         ) {
           jp.collected = true;
           g.jetpackTimer = 300; // 喷气时间 (约5秒，足够避开3个障碍)
+          g.jetpackY = Math.max(PLANE_MIN_Y, Math.min(PLANE_MAX_Y, g.playerY)); // 从当前位置开始
           g.score += 100;
           setScore(g.score);
         }
@@ -678,6 +726,21 @@ export default function App() {
           ctx.fillRect(jp.x + 10, jp.y + 15, JETPACK_SIZE - 20, 10);
         }
       });
+
+      // 喷气背包模式提示：滑动控制飞机
+      if (g.jetpackTimer > 0 && g.jetpackTimer > 260) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, (g.jetpackTimer - 260) / 20);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.beginPath();
+        ctx.roundRect(CANVAS_WIDTH / 2 - 80, CANVAS_HEIGHT / 2 - 20, 160, 40, 10);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 15px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('↑↓ 滑动控制飞机', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 6);
+        ctx.restore();
+      }
     };
 
     animationId = requestAnimationFrame(update);
@@ -692,7 +755,7 @@ export default function App() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          onClick={jump}
+          onClick={() => { if (gameRef.current.jetpackTimer <= 0) jump(); }}
           className="w-full h-full block cursor-pointer object-contain"
         />
 
