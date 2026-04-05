@@ -1,0 +1,5 @@
+{
+  "name": "小车跑酷",
+  "description": "一个以城市马路为背景的跑酷游戏，玩家控制小汽车躲避障碍并收集金币，还有加速带和喷气背包助力！",
+  "requestFramePermissions": []
+}
