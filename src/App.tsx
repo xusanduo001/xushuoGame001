@@ -280,7 +280,7 @@ export default function App() {
       g.jetpacks = g.jetpacks.filter(jp => jp.x + JETPACK_SIZE > 0);
 
       // 8. 碰撞检测 - 尖刺 (碰到暂停2秒并扣血)
-      if (g.jetpackTimer === 0) {
+      if (g.jetpackTimer <= 0) {
         for (let i = 0; i < g.obstacles.length; i++) {
           const obs = g.obstacles[i];
           if (
