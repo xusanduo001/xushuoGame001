@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Trophy, Play, RotateCcw, Coins, Heart } from 'lucide-react';
+import { Trophy, Play, RotateCcw, Coins, Heart, Dices, Calendar, CalendarDays, Home } from 'lucide-react';
 
 // 游戏常量
 const CANVAS_WIDTH = 400;
@@ -49,9 +49,69 @@ export default function App() {
   const [playerImage, setPlayerImage] = useState<HTMLImageElement | null>(null);
   const [gameState, setGameState] = useState<GameState>('START');
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
+  const [highScore, setHighScore] = useState(Number(localStorage.getItem('game_highScore')) || 0);
   const [lives, setLives] = useState(3);
   const [fps, setFps] = useState(0);
+  const [nickname, setNickname] = useState(localStorage.getItem('game_nickname') || '');
+  const [leaderboard, setLeaderboard] = useState<{ daily: any[], weekly: any[] }>({ daily: [], weekly: [] });
+
+  // 随机名称生成器 (2-3个字)
+  const generateRandomName = (isInitial = false) => {
+    const names = [
+      '迪迦', '赛罗', '泰罗', '艾斯', '盖亚', '戴拿', '捷德', '欧布', '赛文', '雷欧',
+      '高斯', '麦克斯', '梦比', '希卡利', '贝利亚', '哥斯拉', '金刚', '杰顿', '巴尔坦', '达达',
+      '红王', '艾雷王', '泰兰特', '加坦', '佐菲', '初代', '杰克', '爱迪', '尤莉', '格丽乔'
+    ];
+    const name = names[Math.floor(Math.random() * names.length)];
+    
+    if (isInitial) {
+      // 只有在没有存储昵称时才设置
+      if (!localStorage.getItem('game_nickname')) {
+        setNickname(name);
+        localStorage.setItem('game_nickname', name);
+      }
+    } else {
+      setNickname(name);
+      localStorage.setItem('game_nickname', name);
+    }
+  };
+
+  // 获取排行榜
+  const fetchLeaderboard = async () => {
+    try {
+      const res = await fetch('/api/leaderboard');
+      const data = await res.json();
+      setLeaderboard(data);
+    } catch (err) {
+      console.error('Failed to fetch leaderboard', err);
+    }
+  };
+
+  // 提交分数
+  const submitScore = async (finalScore: number) => {
+    if (!nickname) return;
+    console.log(`Submitting score for ${nickname}: ${finalScore}`);
+    try {
+      const response = await fetch('/api/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname, score: finalScore })
+      });
+      if (response.ok) {
+        console.log('Score submitted successfully');
+        fetchLeaderboard();
+      } else {
+        console.error('Failed to submit score:', await response.text());
+      }
+    } catch (err) {
+      console.error('Failed to submit score', err);
+    }
+  };
+
+  useEffect(() => {
+    generateRandomName(true);
+    fetchLeaderboard();
+  }, []);
 
   // 初始化图片加载
   useEffect(() => {
@@ -133,9 +193,7 @@ export default function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
-        if (gameState === 'START' || gameState === 'GAMEOVER') {
-          startGame();
-        } else {
+        if (gameState === 'PLAYING') {
           jump();
         }
       }
@@ -211,7 +269,11 @@ export default function App() {
           g.policeX = -20;
         } else {
           setGameState('GAMEOVER');
-          if (g.score > highScore) setHighScore(g.score);
+          if (g.score > highScore) {
+            setHighScore(g.score);
+            localStorage.setItem('game_highScore', g.score.toString());
+          }
+          submitScore(g.score);
           return;
         }
       }
@@ -296,7 +358,11 @@ export default function App() {
               g.policeX = -20;   // 撞到尖刺时，警车也退后一点，防止瞬间双重扣血
             } else {
               setGameState('GAMEOVER');
-              if (g.score > highScore) setHighScore(g.score);
+              if (g.score > highScore) {
+                setHighScore(g.score);
+                localStorage.setItem('game_highScore', g.score.toString());
+              }
+              submitScore(g.score);
               return;
             }
             // 移除该尖刺防止重复触发
@@ -640,6 +706,11 @@ export default function App() {
               <div className="bg-black/20 backdrop-blur px-3 py-1 rounded-full">
                 <span className="text-[10px] font-mono text-white/80">FPS: {fps}</span>
               </div>
+              {nickname && (
+                <div className="bg-white/10 backdrop-blur px-3 py-1 rounded-full border border-white/10">
+                  <span className="text-[11px] font-bold text-white/90 tracking-wide">{nickname}</span>
+                </div>
+              )}
             </div>
             <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-full flex items-center gap-2 shadow-sm">
               <Trophy className="w-5 h-5 text-orange-500" />
@@ -659,14 +730,86 @@ export default function App() {
 
         {/* 开始界面 */}
         {gameState === 'START' && (
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center text-white p-6 text-center">
-            <h1 className="text-4xl font-black mb-4 drop-shadow-lg">小车跑酷</h1>
-            <p className="text-lg mb-8 opacity-90">点击屏幕或按空格键跳跃<br/>躲避障碍物，收集金币！</p>
+          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center p-4 text-white overflow-y-auto">
+            {/* 嵌入式排行榜 */}
+            <div className="w-full max-w-[320px] mb-6 space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Trophy className="w-5 h-5 text-yellow-400" />
+                <h2 className="text-lg font-black uppercase tracking-widest">英雄榜</h2>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                {/* 简易天榜 */}
+                <div className="space-y-1">
+                  <h3 className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-2">
+                    <Calendar className="w-3 h-3" /> 今日
+                  </h3>
+                  {leaderboard.daily.slice(0, 5).map((entry, i) => (
+                    <div key={i} className="flex items-center justify-between bg-white/5 px-2 py-1 rounded-lg text-[11px] border border-white/5">
+                      <span className="truncate max-w-[60px] font-bold">{entry.nickname}</span>
+                      <span className="text-yellow-400 font-mono">{entry.score}</span>
+                    </div>
+                  ))}
+                  {leaderboard.daily.length === 0 && <p className="text-[10px] text-slate-600 italic">暂无</p>}
+                </div>
+
+                {/* 简易周榜 */}
+                <div className="space-y-1">
+                  <h3 className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1 mb-2">
+                    <CalendarDays className="w-3 h-3" /> 本周
+                  </h3>
+                  {leaderboard.weekly.slice(0, 5).map((entry, i) => (
+                    <div key={i} className="flex items-center justify-between bg-white/5 px-2 py-1 rounded-lg text-[11px] border border-white/5">
+                      <span className="truncate max-w-[60px] font-bold">{entry.nickname}</span>
+                      <span className="text-blue-400 font-mono">{entry.score}</span>
+                    </div>
+                  ))}
+                  {leaderboard.weekly.length === 0 && <p className="text-[10px] text-slate-600 italic">暂无</p>}
+                </div>
+              </div>
+            </div>
+
+            <h1 className="text-3xl font-black mb-6 drop-shadow-lg text-green-400">小车跑酷</h1>
+            
+            {/* 昵称输入框 */}
+            <div className="mb-6 w-full max-w-[280px]">
+              <label className="block text-[10px] font-bold mb-2 text-white/60 uppercase tracking-widest">你的英雄代号 (2-3字)</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={nickname}
+                  maxLength={3}
+                  onChange={(e) => {
+                    const val = e.target.value.trim();
+                    setNickname(val);
+                    if (val.length >= 2 && val.length <= 3) {
+                      localStorage.setItem('game_nickname', val);
+                    }
+                  }}
+                  placeholder="输入昵称..."
+                  className="flex-1 bg-white/10 border-2 border-white/20 rounded-xl px-4 py-2 text-white placeholder:text-white/30 focus:outline-none focus:border-green-400 transition-all font-bold text-sm"
+                />
+                <button
+                  onClick={() => generateRandomName(false)}
+                  className="bg-white/10 hover:bg-white/20 p-2 rounded-xl transition-all active:scale-90"
+                  title="随机生成"
+                >
+                  <Dices className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
             <button
-              onClick={startGame}
-              className="bg-green-500 hover:bg-green-400 active:scale-95 transition-all px-8 py-4 rounded-2xl font-bold text-2xl flex items-center gap-3 shadow-xl"
+              onClick={() => {
+                if (!nickname || nickname.length < 2 || nickname.length > 3) {
+                  alert('昵称必须是 2-3 个字哦！');
+                  return;
+                }
+                startGame();
+              }}
+              className="bg-green-500 hover:bg-green-400 active:scale-95 transition-all px-8 py-3 rounded-2xl font-bold text-xl flex items-center gap-3 shadow-xl"
             >
-              <Play className="fill-current" /> 开始游戏
+              <Play className="fill-current w-5 h-5" /> 开始游戏
             </button>
           </div>
         )}
@@ -682,16 +825,23 @@ export default function App() {
             </div>
             <button
               onClick={startGame}
-              className="bg-white text-red-500 hover:bg-slate-100 active:scale-95 transition-all px-8 py-4 rounded-2xl font-bold text-2xl flex items-center gap-3 shadow-xl"
+              className="bg-white text-red-500 hover:bg-slate-100 active:scale-95 transition-all px-8 py-4 rounded-2xl font-bold text-2xl flex items-center gap-3 shadow-xl mb-4"
             >
               <RotateCcw /> 再玩一次
+            </button>
+            <button
+              onClick={() => setGameState('START')}
+              className="bg-white/20 hover:bg-white/30 active:scale-95 transition-all px-8 py-3 rounded-2xl font-bold text-lg flex items-center gap-3 shadow-lg"
+            >
+              <Home className="w-5 h-5" /> 返回首页
             </button>
           </div>
         )}
       </div>
 
-      <div className="mt-8 text-slate-400 text-sm font-medium">
-        适合 9 岁儿童 • 简单安全 • 快乐运动
+      <div className="mt-8 flex flex-col items-center gap-1 text-sm font-medium">
+        <div className="text-slate-400">适合 9 岁儿童 • 简单安全 • 快乐运动</div>
+        <div className="text-slate-400">许硕创意+语音输入+自然语言编程,许硕爸爸协助部署运行</div>
       </div>
     </div>
   );
