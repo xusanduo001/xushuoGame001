@@ -52,6 +52,7 @@ export default function App() {
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [lives, setLives] = useState(3);
+  const [fps, setFps] = useState(0);
 
   // 初始化图片加载
   useEffect(() => {
@@ -86,7 +87,9 @@ export default function App() {
     obstacleCount: 0,
     lastTime: 0,
     spawnTimer: 0,
-    coinTimer: 0
+    coinTimer: 0,
+    fpsFrames: 0,
+    fpsLastTime: 0
   });
 
   // 开始游戏
@@ -109,7 +112,9 @@ export default function App() {
       obstacleCount: 0,
       lastTime: 0,
       spawnTimer: 0,
-      coinTimer: 0
+      coinTimer: 0,
+      fpsFrames: 0,
+      fpsLastTime: 0
     };
     setScore(0);
     setLives(3);
@@ -158,6 +163,14 @@ export default function App() {
       if (!g.lastTime) g.lastTime = time;
       const deltaTime = (time - g.lastTime) / (1000 / 60);
       g.lastTime = time;
+
+      // 计算 FPS
+      g.fpsFrames++;
+      if (time - g.fpsLastTime >= 1000) {
+        setFps(Math.round((g.fpsFrames * 1000) / (time - g.fpsLastTime)));
+        g.fpsFrames = 0;
+        g.fpsLastTime = time;
+      }
 
       // 限制 deltaTime 防止切屏回来后产生巨大的跳跃
       const dt = Math.min(deltaTime, 3);
@@ -619,10 +632,15 @@ export default function App() {
 
         {/* 分数显示 */}
         <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 pointer-events-none">
-          <div className="flex justify-between items-center w-full">
-            <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-full flex items-center gap-2 shadow-sm">
-              <Coins className="w-5 h-5 text-yellow-500" />
-              <span className="font-bold text-xl text-slate-700">{score}</span>
+          <div className="flex justify-between items-start w-full">
+            <div className="flex flex-col gap-2">
+              <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-full flex items-center gap-2 shadow-sm">
+                <Coins className="w-5 h-5 text-yellow-500" />
+                <span className="font-bold text-xl text-slate-700">{score}</span>
+              </div>
+              <div className="bg-black/20 backdrop-blur px-3 py-1 rounded-full self-start">
+                <span className="text-[10px] font-mono text-white/80">FPS: {fps}</span>
+              </div>
             </div>
             <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-full flex items-center gap-2 shadow-sm">
               <Trophy className="w-5 h-5 text-orange-500" />
