@@ -888,41 +888,41 @@ export default function App() {
 
         {/* 全屏排行榜弹窗 */}
         {showFullLeaderboard && (
-        <div className="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex flex-col pt-12 p-6 text-white animate-in fade-in zoom-in duration-200">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-yellow-400" />
-              <h2 className="text-3xl font-black italic tracking-tighter">排行榜</h2>
+        <div className="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex flex-col pt-6 p-4 text-white animate-in fade-in zoom-in duration-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-400" />
+              <h2 className="text-lg font-black italic tracking-tighter">排行榜</h2>
             </div>
             <button 
               onClick={() => setShowFullLeaderboard(false)}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all"
+              className="p-1.5 bg-white/10 hover:bg-white/20 rounded-full transition-all"
             >
-              <X className="w-6 h-6" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-8 pr-2 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1 custom-scrollbar">
             {/* 今日排行 */}
             <section>
-              <div className="flex items-center gap-2 mb-4 border-b border-white/10 pb-2">
-                <Calendar className="w-5 h-5 text-yellow-400" />
-                <h3 className="text-lg font-bold uppercase tracking-widest text-slate-400">今日排行</h3>
+              <div className="flex items-center gap-1.5 mb-2 border-b border-white/10 pb-1">
+                <Calendar className="w-3.5 h-3.5 text-yellow-400" />
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">今日排行</h3>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {leaderboard.daily.map((entry, i) => (
-                  <div key={i} className={`flex items-center justify-between p-4 rounded-2xl border ${i === 0 ? 'bg-yellow-400/10 border-yellow-400/30' : 'bg-white/5 border-white/5'}`}>
-                    <div className="flex items-center gap-4">
-                      <span className={`w-6 text-center font-black italic ${i <= 2 ? 'text-yellow-400 text-xl' : 'text-slate-500'}`}>
+                  <div key={i} className={`flex items-center justify-between px-3 py-1.5 rounded-xl border ${i === 0 ? 'bg-yellow-400/10 border-yellow-400/30' : 'bg-white/5 border-white/5'}`}>
+                    <div className="flex items-center gap-3">
+                      <span className={`w-5 text-center font-black italic text-sm ${i <= 2 ? 'text-yellow-400' : 'text-slate-500'}`}>
                         {i + 1}
                       </span>
-                      <span className="font-bold text-lg">{entry.nickname}</span>
+                      <span className="font-bold text-sm">{entry.nickname}</span>
                     </div>
-                    <span className="text-2xl font-mono font-black text-yellow-400">{entry.score}</span>
+                    <span className="text-base font-mono font-black text-yellow-400">{entry.score}</span>
                   </div>
                 ))}
                 {leaderboard.daily.length === 0 && (
-                  <div className="text-center py-12 text-slate-600 italic">
+                  <div className="text-center py-6 text-slate-600 italic text-xs">
                     今天还没有人上榜哦，快去创造纪录吧！
                   </div>
                 )}
@@ -931,24 +931,24 @@ export default function App() {
 
             {/* 本周排行 */}
             <section>
-              <div className="flex items-center gap-2 mb-4 border-b border-white/10 pb-2">
-                <CalendarDays className="w-5 h-5 text-blue-400" />
-                <h3 className="text-lg font-bold uppercase tracking-widest text-slate-400">本周排行</h3>
+              <div className="flex items-center gap-1.5 mb-2 border-b border-white/10 pb-1">
+                <CalendarDays className="w-3.5 h-3.5 text-blue-400" />
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">本周排行</h3>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {leaderboard.weekly.map((entry, i) => (
-                  <div key={i} className={`flex items-center justify-between p-4 rounded-2xl border ${i === 0 ? 'bg-blue-400/10 border-blue-400/30' : 'bg-white/5 border-white/5'}`}>
-                    <div className="flex items-center gap-4">
-                      <span className={`w-6 text-center font-black italic ${i <= 2 ? 'text-blue-400 text-xl' : 'text-slate-500'}`}>
+                  <div key={i} className={`flex items-center justify-between px-3 py-1.5 rounded-xl border ${i === 0 ? 'bg-blue-400/10 border-blue-400/30' : 'bg-white/5 border-white/5'}`}>
+                    <div className="flex items-center gap-3">
+                      <span className={`w-5 text-center font-black italic text-sm ${i <= 2 ? 'text-blue-400' : 'text-slate-500'}`}>
                         {i + 1}
                       </span>
-                      <span className="font-bold text-lg">{entry.nickname}</span>
+                      <span className="font-bold text-sm">{entry.nickname}</span>
                     </div>
-                    <span className="text-2xl font-mono font-black text-blue-400">{entry.score}</span>
+                    <span className="text-base font-mono font-black text-blue-400">{entry.score}</span>
                   </div>
                 ))}
                 {leaderboard.weekly.length === 0 && (
-                  <div className="text-center py-12 text-slate-600 italic">
+                  <div className="text-center py-6 text-slate-600 italic text-xs">
                     本周还没有人上榜哦！
                   </div>
                 )}
@@ -956,10 +956,10 @@ export default function App() {
             </section>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-3">
             <button 
               onClick={() => setShowFullLeaderboard(false)}
-              className="w-full bg-white/10 hover:bg-white/20 py-4 rounded-2xl font-bold transition-all active:scale-95"
+              className="w-full bg-white/10 hover:bg-white/20 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95"
             >
               返回游戏
             </button>
