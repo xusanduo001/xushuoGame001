@@ -15,8 +15,7 @@ const GROUND_Y = 500;
 const PLAYER_SIZE = 40;
 const OBSTACLE_SPEED = 5;
 const COIN_SIZE = 25;
-const BOOST_PAD_WIDTH = 60;
-const BOOST_PAD_HEIGHT = 10;
+const HEART_ITEM_SIZE = 30;
 const JETPACK_SIZE = 30;
 
 type GameState = 'START' | 'PLAYING' | 'GAMEOVER';
@@ -27,9 +26,9 @@ interface Obstacle {
   height: number;
 }
 
-interface BoostPad {
+interface HeartItem {
   x: number;
-  width: number;
+  y: number;
   collected: boolean;
 }
 
@@ -74,7 +73,7 @@ export default function App() {
     playerVY: 0,
     jumpsCount: 0,
     obstacles: [] as Obstacle[],
-    boostPads: [] as BoostPad[],
+    heartItems: [] as HeartItem[],
     jetpacks: [] as Jetpack[],
     coins: [] as Coin[],
     frame: 0,
@@ -99,7 +98,7 @@ export default function App() {
       playerVY: 0,
       jumpsCount: 0,
       obstacles: [],
-      boostPads: [],
+      heartItems: [],
       jetpacks: [],
       coins: [],
       frame: 0,
@@ -234,9 +233,10 @@ export default function App() {
             collected: false
           });
         } else if (g.obstacleCount % 10 === 0) {
-          g.boostPads.push({
+          // 每10个障碍生成一个红心
+          g.heartItems.push({
             x: CANVAS_WIDTH,
-            width: BOOST_PAD_WIDTH,
+            y: GROUND_Y - 60 - Math.random() * 40,
             collected: false
           });
         } else {
@@ -269,14 +269,14 @@ export default function App() {
         const moveSpeed = OBSTACLE_SPEED * dt;
         g.obstacles.forEach(obs => obs.x -= moveSpeed);
         g.coins.forEach(coin => coin.x -= moveSpeed);
-        g.boostPads.forEach(pad => pad.x -= moveSpeed);
+        g.heartItems.forEach(item => item.x -= moveSpeed);
         g.jetpacks.forEach(jp => jp.x -= moveSpeed);
       }
 
       // 7. 移除屏幕外的元素
       g.obstacles = g.obstacles.filter(obs => obs.x + obs.width > 0);
       g.coins = g.coins.filter(coin => coin.x + COIN_SIZE > 0);
-      g.boostPads = g.boostPads.filter(pad => pad.x + pad.width > 0);
+      g.heartItems = g.heartItems.filter(item => item.x + HEART_ITEM_SIZE > 0);
       g.jetpacks = g.jetpacks.filter(jp => jp.x + JETPACK_SIZE > 0);
 
       // 8. 碰撞检测 - 尖刺 (碰到暂停2秒并扣血)
@@ -320,18 +320,19 @@ export default function App() {
         }
       }
 
-      // 10. 碰撞检测 - 加速带
-      for (const pad of g.boostPads) {
-        if (!pad.collected &&
-          50 + PLAYER_SIZE > pad.x &&
-          50 < pad.x + pad.width &&
-          g.playerY + PLAYER_SIZE > GROUND_Y - BOOST_PAD_HEIGHT
+      // 10. 碰撞检测 - 红心奖励
+      for (const item of g.heartItems) {
+        if (!item.collected &&
+          50 + PLAYER_SIZE > item.x &&
+          50 < item.x + HEART_ITEM_SIZE &&
+          g.playerY < item.y + HEART_ITEM_SIZE &&
+          g.playerY + PLAYER_SIZE > item.y
         ) {
-          pad.collected = true;
+          item.collected = true;
           g.lives++; // 增加一条命
           setLives(g.lives);
           g.policeX = -10; // 甩开警车
-          g.score += 50; // 加速带额外加分
+          g.score += 50; // 额外加分
           setScore(g.score);
         }
       }
@@ -397,28 +398,26 @@ export default function App() {
       ctx.fillStyle = '#333';
       ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
       
-      // 绘制加速带
-      g.boostPads.forEach(pad => {
-        if (!pad.collected) {
-          const gradient = ctx.createLinearGradient(pad.x, GROUND_Y, pad.x, GROUND_Y + BOOST_PAD_HEIGHT);
-          gradient.addColorStop(0, '#2ecc71');
-          gradient.addColorStop(1, '#27ae60');
-          ctx.fillStyle = gradient;
-          ctx.beginPath();
-          ctx.roundRect(pad.x, GROUND_Y - 5, pad.width, 10, 5);
-          ctx.fill();
+      // 绘制红心奖励
+      g.heartItems.forEach(item => {
+        if (!item.collected) {
+          ctx.save();
+          ctx.translate(item.x + HEART_ITEM_SIZE / 2, item.y + HEART_ITEM_SIZE / 2);
+          // 呼吸效果
+          const scale = 1 + Math.sin(g.frame / 10) * 0.1;
+          ctx.scale(scale, scale);
           
-          // 加速箭头
-          ctx.strokeStyle = 'white';
-          ctx.lineWidth = 2;
-          for (let i = 0; i < 3; i++) {
-            const ax = pad.x + 15 + i * 15;
-            ctx.beginPath();
-            ctx.moveTo(ax, GROUND_Y);
-            ctx.lineTo(ax + 10, GROUND_Y - 5);
-            ctx.lineTo(ax, GROUND_Y - 10);
-            ctx.stroke();
-          }
+          ctx.fillStyle = '#ff4757';
+          ctx.beginPath();
+          const w = HEART_ITEM_SIZE * 0.8;
+          const h = HEART_ITEM_SIZE * 0.8;
+          ctx.moveTo(0, h / 4);
+          ctx.bezierCurveTo(0, 0, -w / 2, 0, -w / 2, h / 4);
+          ctx.bezierCurveTo(-w / 2, h / 2, 0, h * 0.7, 0, h);
+          ctx.bezierCurveTo(0, h * 0.7, w / 2, h / 2, w / 2, h / 4);
+          ctx.bezierCurveTo(w / 2, 0, 0, 0, 0, h / 4);
+          ctx.fill();
+          ctx.restore();
         }
       });
       
@@ -633,12 +632,12 @@ export default function App() {
         {/* 分数显示 */}
         <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 pointer-events-none">
           <div className="flex justify-between items-start w-full">
-            <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
               <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-full flex items-center gap-2 shadow-sm">
                 <Coins className="w-5 h-5 text-yellow-500" />
                 <span className="font-bold text-xl text-slate-700">{score}</span>
               </div>
-              <div className="bg-black/20 backdrop-blur px-3 py-1 rounded-full self-start">
+              <div className="bg-black/20 backdrop-blur px-3 py-1 rounded-full">
                 <span className="text-[10px] font-mono text-white/80">FPS: {fps}</span>
               </div>
             </div>
