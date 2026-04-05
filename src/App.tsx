@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Trophy, Play, RotateCcw, Coins, Heart, Dices, Calendar, CalendarDays, Home } from 'lucide-react';
+import { Trophy, Play, RotateCcw, Coins, Heart, Dices, Calendar, CalendarDays, Home, List, X, ChevronRight } from 'lucide-react';
 
 // 游戏常量
 const CANVAS_WIDTH = 400;
@@ -54,6 +54,7 @@ export default function App() {
   const [fps, setFps] = useState(0);
   const [nickname, setNickname] = useState(localStorage.getItem('game_nickname') || '');
   const [leaderboard, setLeaderboard] = useState<{ daily: any[], weekly: any[] }>({ daily: [], weekly: [] });
+  const [showFullLeaderboard, setShowFullLeaderboard] = useState(false);
 
   // 随机名称生成器 (2-3个字)
   const generateRandomName = (isInitial = false) => {
@@ -684,19 +685,25 @@ export default function App() {
   }, [gameState, highScore]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100 font-sans select-none overflow-hidden touch-none">
-      <div className="relative shadow-2xl rounded-3xl overflow-hidden bg-white border-8 border-white">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 sm:bg-slate-100 font-sans select-none overflow-hidden touch-none">
+      <div className="relative shadow-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-b from-[#1a2a6c] via-[#1a2a6c] to-[#333] sm:border-8 border-white w-full h-screen sm:h-auto sm:max-w-[400px] sm:aspect-[400/600] flex flex-col items-center justify-center">
         {/* 游戏画布 */}
         <canvas
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
           onClick={jump}
-          className="block cursor-pointer"
+          className="w-full h-full block cursor-pointer object-contain"
         />
 
+        {/* 底部信息 - 移动到容器内部 */}
+        <div className="absolute bottom-4 left-0 right-0 flex flex-col items-center gap-1 text-[10px] sm:text-xs font-medium pointer-events-none">
+          <div className="text-white/40">适合 9 岁儿童 • 简单安全 • 快乐运动</div>
+          <div className="text-white/40">许硕创意+语音输入+自然语言编程,许硕爸爸协助部署运行</div>
+        </div>
+
         {/* 分数显示 */}
-        <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 pointer-events-none">
+        <div className="absolute top-8 left-4 right-4 flex flex-col gap-2 pointer-events-none">
           <div className="flex justify-between items-start w-full">
             <div className="flex items-center gap-2">
               <div className="bg-white/80 backdrop-blur px-4 py-2 rounded-full flex items-center gap-2 shadow-sm">
@@ -730,12 +737,23 @@ export default function App() {
 
         {/* 开始界面 */}
         {gameState === 'START' && (
-          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center p-4 text-white overflow-y-auto">
+          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-white overflow-y-auto">
             {/* 嵌入式排行榜 */}
             <div className="w-full max-w-[320px] mb-6 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Trophy className="w-5 h-5 text-yellow-400" />
-                <h2 className="text-lg font-black uppercase tracking-widest">英雄榜</h2>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-yellow-400" />
+                  <h2 className="text-lg font-black uppercase tracking-widest">排行榜</h2>
+                </div>
+                <button 
+                  onClick={() => {
+                    setShowFullLeaderboard(true);
+                    fetchLeaderboard();
+                  }}
+                  className="text-[10px] font-bold text-white/60 hover:text-white flex items-center gap-1 bg-white/5 px-2 py-1 rounded-full transition-all"
+                >
+                  查看全部 <ChevronRight className="w-3 h-3" />
+                </button>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
@@ -816,13 +834,25 @@ export default function App() {
 
         {/* 游戏结束界面 */}
         {gameState === 'GAMEOVER' && (
-          <div className="absolute inset-0 bg-red-500/80 backdrop-blur-md flex flex-col items-center justify-center text-white p-6 text-center">
+          <div className="absolute inset-0 bg-red-500/80 backdrop-blur-md flex flex-col items-center justify-center pt-12 p-6 text-white text-center">
             <h2 className="text-5xl font-black mb-2">游戏结束</h2>
             <div className="bg-white/20 rounded-3xl p-6 mb-8 w-full max-w-[250px]">
               <p className="text-xl opacity-80 mb-1">本次得分</p>
               <p className="text-6xl font-black mb-4">{score}</p>
               <p className="text-sm opacity-80">最高纪录: {highScore}</p>
             </div>
+            <div className="flex gap-4 mb-8">
+              <button
+                onClick={() => {
+                  setShowFullLeaderboard(true);
+                  fetchLeaderboard();
+                }}
+                className="bg-white/20 hover:bg-white/30 active:scale-95 transition-all px-6 py-3 rounded-2xl font-bold text-lg flex items-center gap-2 shadow-lg"
+              >
+                <Trophy className="w-5 h-5" /> 排行榜
+              </button>
+            </div>
+
             <button
               onClick={startGame}
               className="bg-white text-red-500 hover:bg-slate-100 active:scale-95 transition-all px-8 py-4 rounded-2xl font-bold text-2xl flex items-center gap-3 shadow-xl mb-4"
@@ -839,10 +869,86 @@ export default function App() {
         )}
       </div>
 
-      <div className="mt-8 flex flex-col items-center gap-1 text-sm font-medium">
-        <div className="text-slate-400">适合 9 岁儿童 • 简单安全 • 快乐运动</div>
-        <div className="text-slate-400">许硕创意+语音输入+自然语言编程,许硕爸爸协助部署运行</div>
-      </div>
+      {/* 全屏排行榜弹窗 */}
+      {showFullLeaderboard && (
+        <div className="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex flex-col pt-12 p-6 text-white animate-in fade-in zoom-in duration-200">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <Trophy className="w-8 h-8 text-yellow-400" />
+              <h2 className="text-3xl font-black italic tracking-tighter">排行榜</h2>
+            </div>
+            <button 
+              onClick={() => setShowFullLeaderboard(false)}
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-8 pr-2 custom-scrollbar">
+            {/* 今日排行 */}
+            <section>
+              <div className="flex items-center gap-2 mb-4 border-b border-white/10 pb-2">
+                <Calendar className="w-5 h-5 text-yellow-400" />
+                <h3 className="text-lg font-bold uppercase tracking-widest text-slate-400">今日排行</h3>
+              </div>
+              <div className="space-y-2">
+                {leaderboard.daily.map((entry, i) => (
+                  <div key={i} className={`flex items-center justify-between p-4 rounded-2xl border ${i === 0 ? 'bg-yellow-400/10 border-yellow-400/30' : 'bg-white/5 border-white/5'}`}>
+                    <div className="flex items-center gap-4">
+                      <span className={`w-6 text-center font-black italic ${i <= 2 ? 'text-yellow-400 text-xl' : 'text-slate-500'}`}>
+                        {i + 1}
+                      </span>
+                      <span className="font-bold text-lg">{entry.nickname}</span>
+                    </div>
+                    <span className="text-2xl font-mono font-black text-yellow-400">{entry.score}</span>
+                  </div>
+                ))}
+                {leaderboard.daily.length === 0 && (
+                  <div className="text-center py-12 text-slate-600 italic">
+                    今天还没有人上榜哦，快去创造纪录吧！
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* 本周排行 */}
+            <section>
+              <div className="flex items-center gap-2 mb-4 border-b border-white/10 pb-2">
+                <CalendarDays className="w-5 h-5 text-blue-400" />
+                <h3 className="text-lg font-bold uppercase tracking-widest text-slate-400">本周排行</h3>
+              </div>
+              <div className="space-y-2">
+                {leaderboard.weekly.map((entry, i) => (
+                  <div key={i} className={`flex items-center justify-between p-4 rounded-2xl border ${i === 0 ? 'bg-blue-400/10 border-blue-400/30' : 'bg-white/5 border-white/5'}`}>
+                    <div className="flex items-center gap-4">
+                      <span className={`w-6 text-center font-black italic ${i <= 2 ? 'text-blue-400 text-xl' : 'text-slate-500'}`}>
+                        {i + 1}
+                      </span>
+                      <span className="font-bold text-lg">{entry.nickname}</span>
+                    </div>
+                    <span className="text-2xl font-mono font-black text-blue-400">{entry.score}</span>
+                  </div>
+                ))}
+                {leaderboard.weekly.length === 0 && (
+                  <div className="text-center py-12 text-slate-600 italic">
+                    本周还没有人上榜哦！
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+
+          <div className="mt-8">
+            <button 
+              onClick={() => setShowFullLeaderboard(false)}
+              className="w-full bg-white/10 hover:bg-white/20 py-4 rounded-2xl font-bold transition-all active:scale-95"
+            >
+              返回游戏
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

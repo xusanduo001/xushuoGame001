@@ -55,7 +55,7 @@ async function startServer() {
         WHERE created_at >= date('now', 'start of day')
         GROUP BY nickname 
         ORDER BY score DESC 
-        LIMIT 10
+        LIMIT 50
       `);
 
       const weekly = await db.all(`
@@ -64,7 +64,7 @@ async function startServer() {
         WHERE created_at >= date('now', '-7 days')
         GROUP BY nickname 
         ORDER BY score DESC 
-        LIMIT 10
+        LIMIT 50
       `);
 
       res.json({ daily, weekly });
