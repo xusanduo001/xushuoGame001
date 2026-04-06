@@ -1,0 +1,118 @@
+{
+  "name": "token-platform-vscode",
+  "displayName": "Token Platform for VS Code",
+  "description": "将自定义Token汇聚平台集成到VS Code中，支持WebView聊天面板、语言模型提供者和Copilot Chat参与者三种方式。",
+  "version": "0.1.0",
+  "publisher": "xusanduo001",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xusanduo001/xushuoGame001"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["AI", "Chat", "Other"],
+  "keywords": ["AI", "token", "chat", "copilot", "llm"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Token Platform",
+      "properties": {
+        "tokenPlatform.baseUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "Token汇聚平台的基础URL（需兼容OpenAI API格式，例如 http://your-server/v1）"
+        },
+        "tokenPlatform.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Token平台的API密钥"
+        },
+        "tokenPlatform.model": {
+          "type": "string",
+          "default": "gpt-4o",
+          "description": "默认使用的模型名称"
+        },
+        "tokenPlatform.maxTokens": {
+          "type": "number",
+          "default": 4096,
+          "description": "每次对话的最大Token数"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tokenPlatformContainer",
+          "title": "Token Platform",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "tokenPlatformContainer": [
+        {
+          "type": "webview",
+          "id": "tokenPlatform.chatView",
+          "name": "AI 聊天"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "tokenPlatform.openChat",
+        "title": "打开 Token Platform 聊天",
+        "category": "Token Platform",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "tokenPlatform.clearChat",
+        "title": "清空聊天记录",
+        "category": "Token Platform",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "tokenPlatform.configure",
+        "title": "配置 Token Platform",
+        "category": "Token Platform",
+        "icon": "$(settings-gear)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "tokenPlatform.clearChat",
+          "when": "view == tokenPlatform.chatView",
+          "group": "navigation"
+        },
+        {
+          "command": "tokenPlatform.configure",
+          "when": "view == tokenPlatform.chatView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "chatParticipants": [
+      {
+        "id": "tokenPlatform.assistant",
+        "name": "token-platform",
+        "fullName": "Token Platform AI",
+        "description": "使用你的Token汇聚平台进行AI对话",
+        "isSticky": false
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "package": "npx vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}
